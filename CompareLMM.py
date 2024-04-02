@@ -1,4 +1,17 @@
-import googlemaps, json, polyline, math
+import googlemaps, json, polyline, math, g4f
+
+from g4f.Provider import (
+    Bing
+)
+
+# Set with provider
+response = g4f.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    provider=g4f.Provider.Bing,
+    messages=[{"role": "user", "content": "Find the shortest path available with the best of your knowledge from Kilburn Building, Manchester to Picadilly Station, Manchester assuming you were travelling by car with waypoints on every turn along the way and with latitude and longitude for each of the waypoints.  Format the answer for each point like this: 'waypoint > (latitude,longitude)'. Please use latitude and longitude values that can be used in google maps."}],
+    stream=False,
+)
+
 
 gmaps = googlemaps.Client(key='AIzaSyDVS9S2Txb-yhzTW2YkB7ZSSIMUw5EIGsU')
 
@@ -15,14 +28,6 @@ def calcRoute(og, ds, arr):
             pointsArr[arr].append(dd[k])
 
 #################################################################################
-# Function to create points for the base route (different approach)
-# def calcRoute2(og, ds, arr):
-#     route = gmaps.directions(og, ds)
-#     dd = polyline.decode(route[0]['overview_polyline']['points'])
-#     for k in range(0, len(dd)):
-#         pointsArr[arr].append(dd[k])
-
-#################################################################################
 # Function to create points for the observation route
 def obsCalcRoute(og, ds, arr, way):
     route = gmaps.directions(og, ds, waypoints=way)
@@ -35,14 +40,6 @@ def obsCalcRoute(og, ds, arr, way):
             pointsArr[arr].append(dd[k])
 
 #################################################################################
-# Function to create points for the observation route (different approach)
-# def obsCalcRoute2(og, ds, arr, way):
-#     route = gmaps.directions(og, ds, waypoints=way)
-#     dd = polyline.decode(route[0]['overview_polyline']['points'])
-#     for k in range(0, len(dd)):
-#         pointsArr[arr].append(dd[k])
-
-#################################################################################
 # Calculating the difference between the points
 def similarity(arr1, arr2):
     sum = 0
@@ -50,15 +47,6 @@ def similarity(arr1, arr2):
         sum += max(abs(arr1[i][0]),abs(arr2[i][0])) - min(abs(arr1[i][0]),abs(arr2[i][0]))
         sum += max(abs(arr1[i][1]),abs(arr2[i][1])) - min(abs(arr1[i][1]),abs(arr2[i][1]))
     return round(sum, 2)   
-
-#################################################################################
-# # Calculating similiraty by checking the number of points that are the same
-# def similarity2(arr1, arr2):
-#     set1 = set(arr1)
-#     set2 = set(arr2)
-#     common = len(set1.intersection(set2))
-#     percent = (common/(max(len(arr1),len(arr2))))*100
-#     return percent
 
 # Reading the JSON file
 with open('goals_data2.json') as f:
@@ -99,6 +87,7 @@ for i in range(0, len(data)):
         compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop])])
     # print(data[i]['id'])
     minName = min(compArr, key=lambda x: x[1])[0]
+    # print(minName)
     print(compArr)
     if minName == data[i]['intent_goal'] or (compArr[j][1] == 0):
         if ".2." in data[i]['id']:

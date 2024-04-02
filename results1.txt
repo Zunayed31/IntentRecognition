@@ -1,0 +1,20 @@
+####################################################
+Goals: 2
+True positives: 24
+False positives: 1
+Percentage: 0.96
+####################################################
+Goals: 5
+True positives: 24
+False positives: 1
+Percentage: 0.96
+####################################################
+Goals: 10
+True positives: 22
+False positives: 3
+Percentage: 0.88
+####################################################
+Goals: 15
+True positives: 19
+False positives: 6
+Percentage: 0.76
