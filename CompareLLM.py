@@ -40,8 +40,6 @@ def similarity(arr1, arr2):
 with open('goals_data2.json') as f:
     data = json.load(f)
 
-g = open("results.txt", "w")
-
 # Setting up variables
 truePositiveG2 = 0
 falsePositiveG2 = 0
@@ -52,7 +50,7 @@ falsePositiveG10 = 0
 truePositiveG15 = 0
 falsePositiveG15 = 0
 
-file = open('example.txt', 'w')
+file = open('resultsLLM.txt', 'w')
 
 
 # Main loop
@@ -69,26 +67,13 @@ for i in range(0, len(data)):
         pointsArr.append([])
     for j in range (0, len(goals)):
         destination = data[i]['goals'][j]
-        # if data[i]['intent_goal'] == destination:
-        #     track = j
-        
-        baseMessage = f"""Find me {5} key waypoints along the shortest and fastest route between {origin} and {destination}.
-                        Give these waypoints as (latitude,longitude). 
-                        They do not have to be significant landmarks."""
-        baseResponse = g4f.ChatCompletion.create(
-            model="gpt-4",
-            provider=g4f.Provider.Bing,
-            messages=[{"role": "user",
-                        "content": baseMessage}],
-            stream=False,
-            )
-        
-        obsMessage = f"""Find me the shortest path betweeen {origin} and {destination} that follows these points: {obs}. Return me a list of waypoints along the path.
-                        Give these waypoints as (latitude,longitude), do not make the text bold. 
-                        They do not have to be significant landmarks."""
+       
+        obsMessage = f"""Find me the shortest path betweeen {origin} and {destination} that follows these points: {obs}.
+                        Give 20 waypoints along the path of your own in including to the points given.
+                        Give these waypoints in the format :(latitude,longitude), to 4 decimal points."""
         obsResponse = g4f.ChatCompletion.create(
-            model="gpt-4",
-            provider=g4f.Provider.Bing,
+            model="airoboros-70b",
+            provider=g4f.Provider.DeepInfra,
             messages=[{"role": "user",
                         "content": obsMessage}],
             stream=False,
@@ -96,23 +81,24 @@ for i in range(0, len(data)):
         
         pattern = r'\((-?\d+\.\d+), (-?\d+\.\d+)\)'
 
-        print(baseResponse)
         print(obsResponse)
         # Find all matches of the pattern in the text
-        baseMatches = re.findall(pattern, baseResponse)
+        
         obsMatches = re.findall(pattern, obsResponse)
         # Extract latitude and longitude coordinates and store them in an array
-        baseCoordinates = [(float(lat), float(lon)) for lat, lon in baseMatches]
         obsCoordinates = [(float(lat), float(lon)) for lat, lon in obsMatches]
+        while len(obsCoordinates) > 20:
+            obsCoordinates.pop()
+        # print(obsCoordinates)
         
-        obsCalcRoute(origin, destination, j, baseCoordinates)
+        calcRoute(origin, destination, j)
         obsCalcRoute(origin, destination, j+len(goals), obsCoordinates)
         compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop])])
     # print(data[i]['id'])
     minName = min(compArr, key=lambda x: x[1])[0]
     # print(minName)
     print(compArr)
-    file.write(str(compArr))
+    file.write(str(compArr) + '\n')
     if minName == data[i]['intent_goal'] or (compArr[j][1] == 0):
         if ".2." in data[i]['id']:
             truePositiveG2 += 1

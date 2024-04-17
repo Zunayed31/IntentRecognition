@@ -1,6 +1,6 @@
 import googlemaps, json, polyline, math, g4f, re
 
-gmaps = googlemaps.Client(key='AIzaSyDVS9S2Txb-yhzTW2YkB7ZSSIMUw5EIGsU')
+gmaps = googlemaps.Client(key='AIzaSyBmNPQRYf_w4esgDkfLkBb-dVopO5mB1rY')
 
 #################################################################################
 # Function to create points for the base route
@@ -17,7 +17,6 @@ def calcRoute(og, ds, arr):
 #################################################################################
 # Function to create points for the observation route
 def obsCalcRoute(og, ds, arr, way):
-    landmarks = 0
     route = gmaps.directions(og, ds, waypoints=way)
     points = polyline.decode(route[0]['overview_polyline']['points'])
     max = math.floor(len(points) / 20)
@@ -27,25 +26,29 @@ def obsCalcRoute(og, ds, arr, way):
         if len(pointsArr[arr]) < 20:
             pointsArr[arr].append(points[k])
 
-            # Check if there are any tourist attractions nearby
-            poiResults = gmaps.places_nearby(location=(points[k][0], points[k][1]), radius=50, type="tourist_attraction")
-
-            if poiResults['results']:
-                landmarks += 1
-    
-    landmarks = landmarks * 0.05
-    print(landmarks)
-
-    return landmarks
 
 #################################################################################
 # Calculating the difference between the points
-def similarity(arr1, arr2, bonus):
+def similarity(arr1, arr2, intendArr):
+    flag = False
+    bonus = 0
     sum = 0
+    if intendArr:
+        for l in range(0, len(intendArr)):
+            for point in arr2: 
+                if abs(intendArr[l][0] - point[0]) <= 0.005 and abs(intendArr[l][1] - point[1]) <= 0.005:
+                    flag = True
+                    bonus += 1
+                    break
+
     for i in range(min((len(arr1)),len(arr2))):
         sum += max(abs(arr1[i][0]),abs(arr2[i][0])) - min(abs(arr1[i][0]),abs(arr2[i][0]))
         sum += max(abs(arr1[i][1]),abs(arr2[i][1])) - min(abs(arr1[i][1]),abs(arr2[i][1]))
-    sum = sum - bonus
+    
+    if flag:
+        sum = sum - (0.05 * (1 + bonus*(0.5)))
+        if sum <= 0:
+            sum = 0
     return round(sum, 2)   
 
 # Reading the JSON file
@@ -61,8 +64,9 @@ truePositiveG10 = 0
 falsePositiveG10 = 0
 truePositiveG15 = 0
 falsePositiveG15 = 0
+pattern = r'\((-?\d+\.\d+), (-?\d+\.\d+)\)'
 
-file = open('example.txt', 'w')
+file = open('resultsLLMLandmark.txt', 'w')
 
 
 # Main loop
@@ -74,50 +78,56 @@ for i in range(0, len(data)):
     loop = len(goals)
     pointsArr = []
     compArr = []
+
+    intendMessage = f"""Find me 3 key waypoint needed to go through along the shortest and fastest route between {origin} and {data[i]['intent_goal']}.
+                Give these waypoints as (latitude,longitude). """
+    intendResponse = g4f.ChatCompletion.create(
+    model="airoboros-70b",
+    provider=g4f.Provider.DeepInfra,
+    messages=[{"role": "user",
+                "content": intendMessage}],
+    stream=False,
+    )
+
+    intendMatches = re.findall(pattern, intendResponse)
+    intendCoordinates = [(float(lat), float(lon)) for lat, lon in intendMatches]
+    while len(intendCoordinates) > 1:
+        intendCoordinates.pop()
+
+    # print(intendMessage)
+    # print(intendCoordinates)
+
     for x in range(loop):
         pointsArr.append([])
         pointsArr.append([])
     for j in range (0, len(goals)):
         destination = data[i]['goals'][j]
         
-        baseMessage = f"""Find me {5} key waypoints along the shortest and fastest route between {origin} and {destination}.
-                        Give these waypoints as (latitude,longitude) in the same line. 
-                        They do not have to be significant landmarks."""
-        baseResponse = g4f.ChatCompletion.create(
-            model="gpt-4-turbo",
-            provider=g4f.Provider.Bing,
-            messages=[{"role": "user",
-                        "content": baseMessage}],
-            stream=False,
-            )
-        
-        obsMessage = f"""Find me the shortest path betweeen {origin} and {destination} that follows these points: {obs}. Include 5 waypoints of your own.
-                        Give these waypoints as (latitude,longitude) in the same line, do not make the text bold. 
-                        They do not have to be significant landmarks."""
+        obsMessage = f"""Find me the shortest path betweeen {origin} and {destination} that follows these points: {obs}.
+                        Include 5 waypoints of your own.
+                        Give these waypoints as (latitude,longitude). """
         obsResponse = g4f.ChatCompletion.create(
-            model="gpt-4-turbo",
-            provider=g4f.Provider.Bing,
+            model="airoboros-70b",
+            provider=g4f.Provider.DeepInfra,
             messages=[{"role": "user",
                         "content": obsMessage}],
             stream=False,
             )
-        
-        pattern = r'\((-?\d+\.\d+), (-?\d+\.\d+)\)'
 
-        print(baseResponse)
-        print(obsResponse)
+        # print(baseResponse)
+        # print(obsResponse)
 
         # Find all matches of the pattern in the text
-        baseMatches = re.findall(pattern, baseResponse)
         obsMatches = re.findall(pattern, obsResponse)
 
         # Extract latitude and longitude coordinates and store them in an array
-        baseCoordinates = [(float(lat), float(lon)) for lat, lon in baseMatches]
         obsCoordinates = [(float(lat), float(lon)) for lat, lon in obsMatches]
+        while len(obsCoordinates) > 20:
+            obsCoordinates.pop()
         
-        obsCalcRoute(origin, destination, j, baseCoordinates)
-        bonus = obsCalcRoute(origin, destination, j+len(goals), obsCoordinates)
-        compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop], bonus)])
+        calcRoute(origin, destination, j)
+        obsCalcRoute(origin, destination, j+len(goals), obsCoordinates)
+        compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop],intendCoordinates)])
     # print(data[i]['id'])
     minName = min(compArr, key=lambda x: x[1])[0]
     # print(minName)

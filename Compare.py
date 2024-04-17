@@ -6,41 +6,41 @@ gmaps = googlemaps.Client(key='AIzaSyDVS9S2Txb-yhzTW2YkB7ZSSIMUw5EIGsU')
 # Function to create points for the base route
 def calcRoute(og, ds, arr):
     route = gmaps.directions(og, ds)
-    dd = polyline.decode(route[0]['overview_polyline']['points'])
-    max = math.floor(len(dd) / 20)
+    points = polyline.decode(route[0]['overview_polyline']['points'])
+    max = math.floor(len(points) / 20)
     if max == 0:
         max = 1
-    for k in range(0, len(dd), max):
+    for k in range(0, len(points), max):
         if len(pointsArr[arr]) < 20:
-            pointsArr[arr].append(dd[k])
+            pointsArr[arr].append(points[k])
 
 #################################################################################
 # Function to create points for the base route (different approach)
 # def calcRoute2(og, ds, arr):
 #     route = gmaps.directions(og, ds)
-#     dd = polyline.decode(route[0]['overview_polyline']['points'])
-#     for k in range(0, len(dd)):
-#         pointsArr[arr].append(dd[k])
+#     points = polyline.decode(route[0]['overview_polyline']['points'])
+#     for k in range(0, len(points)):
+#         pointsArr[arr].append(points[k])
 
 #################################################################################
 # Function to create points for the observation route
 def obsCalcRoute(og, ds, arr, way):
     route = gmaps.directions(og, ds, waypoints=way)
-    dd = polyline.decode(route[0]['overview_polyline']['points'])
-    max = math.floor(len(dd) / 20)
+    points = polyline.decode(route[0]['overview_polyline']['points'])
+    max = math.floor(len(points) / 20)
     if max == 0:
         max = 1
-    for k in range(0, len(dd), max):
+    for k in range(0, len(points), max):
         if len(pointsArr[arr]) < 20:
-            pointsArr[arr].append(dd[k])
+            pointsArr[arr].append(points[k])
 
 #################################################################################
 # Function to create points for the observation route (different approach)
 # def obsCalcRoute2(og, ds, arr, way):
 #     route = gmaps.directions(og, ds, waypoints=way)
-#     dd = polyline.decode(route[0]['overview_polyline']['points'])
-#     for k in range(0, len(dd)):
-#         pointsArr[arr].append(dd[k])
+#     points = polyline.decode(route[0]['overview_polyline']['points'])
+#     for k in range(0, len(points)):
+#         pointsArr[arr].append(points[k])
 
 #################################################################################
 # Calculating the difference between the points
