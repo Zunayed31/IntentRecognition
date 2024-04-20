@@ -5,9 +5,9 @@ False positives: 2
 Percentage: 0.92
 ####################################################
 Goals: 5
-True positives: 22
-False positives: 3
-Percentage: 0.88
+True positives: 21
+False positives: 4
+Percentage: 0.84
 ####################################################
 Goals: 10
 True positives: 20

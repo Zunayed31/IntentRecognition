@@ -1,4 +1,4 @@
-import googlemaps, json, polyline, math
+import googlemaps, re, g4f, json, polyline, math
 
 gmaps = googlemaps.Client(key='AIzaSyDVS9S2Txb-yhzTW2YkB7ZSSIMUw5EIGsU')
 
@@ -44,12 +44,28 @@ def obsCalcRoute(og, ds, arr, way):
 
 #################################################################################
 # Calculating the difference between the points
-def similarity(arr1, arr2):
+def similarity(arr1, arr2, intendArr):
+    flag = False
+    bonus = 0
     sum = 0
+    if intendArr:
+        for l in range(0, len(intendArr)):
+            for point in arr2: 
+                if abs(intendArr[l][0] - point[0]) <= 0.005 and abs(intendArr[l][1] - point[1]) <= 0.005:
+                    flag = True
+                    bonus += 1
+                    break
+
     for i in range(min((len(arr1)),len(arr2))):
         sum += max(abs(arr1[i][0]),abs(arr2[i][0])) - min(abs(arr1[i][0]),abs(arr2[i][0]))
         sum += max(abs(arr1[i][1]),abs(arr2[i][1])) - min(abs(arr1[i][1]),abs(arr2[i][1]))
-    return round(sum, 2)   
+    
+    if flag:
+        sum = sum - (0.05 * (1 + bonus*(0.5)))
+        if sum <= 0:
+            sum = 0.0 
+
+    return round(sum, 2)  
 
 #################################################################################
 # # Calculating similiraty by checking the number of points that are the same
@@ -64,7 +80,7 @@ def similarity(arr1, arr2):
 with open('goals_data2.json') as f:
     data = json.load(f)
 
-g = open("results5.txt", "w")
+file = open("results2.txt", "w")
 
 # Setting up variables
 truePositiveG2 = 0
@@ -75,7 +91,7 @@ truePositiveG10 = 0
 falsePositiveG10 = 0
 truePositiveG15 = 0
 falsePositiveG15 = 0
-
+pattern = r'\((-?\d+\.\d+), (-?\d+\.\d+)\)'
 
 
 # Main loop
@@ -86,21 +102,34 @@ for i in range(0, len(data)):
     loop = len(goals)
     pointsArr = []
     compArr = []
-    track = 0
+    intendMessage = f"""Find me 3 key waypoint needed to go through along the shortest and fastest route between {origin} and {data[i]['intent_goal']}.
+                Give these waypoints as (latitude,longitude). """
+    intendResponse = g4f.ChatCompletion.create(
+        model="airoboros-70b",
+        provider=g4f.Provider.DeepInfra,
+        messages=[{"role": "user",
+                    "content": intendMessage}],
+        stream=False,
+    )
+
+    intendMatches = re.findall(pattern, intendResponse)
+    intendCoordinates = [(float(lat), float(lon)) for lat, lon in intendMatches]
+    while len(intendCoordinates) > 1:
+        intendCoordinates.pop()
+
+
     for x in range(loop):
         pointsArr.append([])
         pointsArr.append([])
     for j in range (0, len(goals)):
         destination = data[i]['goals'][j]
-        if data[i]['intent_goal'] == destination:
-            track = j
         calcRoute(origin, destination, j)
         obsCalcRoute(origin, destination, j+len(goals), obs)
-        compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop])])
+        compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop], intendCoordinates)])
     # print(data[i]['id'])
     minName = min(compArr, key=lambda x: x[1])[0]
     print(compArr)
-    g.write(str(compArr) + '\n')
+    file.write(str(compArr) + '\n')
     if minName == data[i]['intent_goal'] or (compArr[j][1] == 0):
         if ".2." in data[i]['id']:
             truePositiveG2 += 1

@@ -50,6 +50,7 @@ falsePositiveG10 = 0
 truePositiveG15 = 0
 falsePositiveG15 = 0
 
+
 file = open('resultsLLM.txt', 'w')
 
 
