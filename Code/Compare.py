@@ -78,7 +78,7 @@ falsePositiveG15 = 0
 
 
 
-# Main loop
+# Main logic loop calling all functions
 for i in range(0, len(data)):
     origin = data[i]['initial']
     goals = data[i]['goals']
@@ -86,22 +86,26 @@ for i in range(0, len(data)):
     loop = len(goals)
     pointsArr = []
     compArr = []
-    track = 0
     for x in range(loop):
         pointsArr.append([])
         pointsArr.append([])
     for j in range (0, len(goals)):
         destination = data[i]['goals'][j]
-        if data[i]['intent_goal'] == destination:
-            track = j
-        calcRoute(origin, destination, j)
-        obsCalcRoute(origin, destination, j+len(goals), obs)
-        compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop])])
-    # print(data[i]['id'])
+        # calculates the ideal route
+        calcRoute(origin, destination, j) 
+        # calculates the observation route
+        obsCalcRoute(origin, destination, j+len(goals), obs) 
+        # calculates the similarity and stores it in an array
+        compArr.append([destination,similarity(pointsArr[j],pointsArr[j+loop])]) 
     minName = min(compArr, key=lambda x: x[1])[0]
-    print(compArr)
+    print(compArr) # outputs the code
     g.write(str(compArr) + '\n')
-    if minName == data[i]['intent_goal'] or (compArr[j][1] == 0):
+
+
+
+
+
+    if minName == data[i]['intent_goal'] or (compArr[j][1] == 0): # This section outputs the results
         if ".2." in data[i]['id']:
             truePositiveG2 += 1
         elif ".5." in data[i]['id']:
@@ -119,8 +123,6 @@ for i in range(0, len(data)):
             falsePositiveG10 += 1
         elif ".15." in data[i]['id']:
             falsePositiveG15 += 1
-
-    
 
 print('####################################################')
 print("Goals: 2")
